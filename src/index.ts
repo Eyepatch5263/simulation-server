@@ -5,8 +5,14 @@ import { registerSimulationHandlers } from './handlers/simulation-handler.js';
 import { registerFlowHandlers } from './handlers/flow-handler.js';
 import { handleTrafficInjection, getSimulationStatus } from './handlers/traffic-injection-handler.js';
 
-const PORT = Number(process.env.SIMULATION_SERVER_PORT || 3001);
-const HOST = process.env.SIMULATION_SERVER_HOST || '0.0.0.0';
+const PORT = process.env.SIMULATION_SERVER_PORT || 3001;
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:8089',
+  process.env.NEXT_DEPLOYED_URL,
+].filter((origin): origin is string => typeof origin === 'string' && origin.length > 0);
 
 const app = express();
 app.use(express.json());
@@ -14,8 +20,7 @@ app.use(express.json());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    // Reflect request origin so websocket clients from any port can connect.
-    origin: true,
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
   },
   transports: ['websocket', 'polling'],
@@ -38,8 +43,8 @@ io.on('connection', (socket) => {
   });
 });
 
-httpServer.listen(PORT, HOST, () => {
-  console.log(`Simulation server running on ${HOST}:${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`Simulation server running on port ${PORT}`);
   console.log(`- WebSocket: ws://localhost:${PORT}`);
   console.log(`- HTTP API: http://localhost:${PORT}/api/traffic/inject`);
   console.log(`- Health: http://localhost:${PORT}/health`);
